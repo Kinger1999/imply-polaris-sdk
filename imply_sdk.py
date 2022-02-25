@@ -40,20 +40,14 @@ class ImplyAuthenticator:
         }
 
 
-class TableRequest:
-
-    def get(self):
-        return {}
-
-
 class ImplyTableApi:
 
     def __init__(self, auth: ImplyAuthenticator):
         self.auth = auth
         self.TABLE_ENDPOINT = "https://api.imply.io/v1/tables"
 
-    def create(self, table_request: TableRequest) -> Response:
-        response = requests.post(url=self.TABLE_ENDPOINT, data=table_request.get(), headers=self.auth.get_headers())
+    def create(self, table_request: str = None) -> Response:
+        response = requests.post(url=self.TABLE_ENDPOINT, data=table_request, headers=self.auth.get_headers())
         return response
 
     def delete(self, table_id: str) -> Response:
