@@ -68,7 +68,7 @@ class ImplyTableApi:
         response = requests.delete(url=url, data=data, headers=self.auth.get_headers())
         return response
 
-    def get(self, table_id: uuid, detail: str = "summary") -> Response:
+    def get(self, table_id: str = None, detail: str = "summary") -> Response:
         params = {
             "detail": detail
         }
@@ -90,9 +90,9 @@ class ImplyTableApi:
         response = requests.get(url=self.TABLE_ENDPOINT, params=params)
         return response
 
-    def update(self, table_id: str, table_request: TableRequest) -> Response:
+    def update(self, table_id: str, table_request: str = None) -> Response:
         url = f"{self.TABLE_ENDPOINT}/{table_id}"
-        response = requests.put(url=url, data=table_request.get(), headers=self.auth.get_headers())
+        response = requests.put(url=url, data=table_request, headers=self.auth.get_headers())
         return response
 
 
@@ -100,11 +100,11 @@ class ImplyPerformanceApi:
 
     def __init__(self, auth: ImplyAuthenticator):
         self.auth = auth
-        self.INGESTION_ENDPOINT = "https://api.imply.io/v1/performance"
+        self.PERFORMANCE_ENDPOINT = "https://api.imply.io/v1/performance"
 
     def get_storage(self) -> Response:
-        url = f"{self.INGESTION_ENDPOINT}/storage"
-        response = requests.post(url=self.INGESTION_ENDPOINT, headers=self.auth.get_headers())
+        url = f"{self.PERFORMANCE_ENDPOINT}/storage"
+        response = requests.post(url=self.PERFORMANCE_ENDPOINT, headers=self.auth.get_headers())
         return response
 
 
@@ -118,9 +118,10 @@ class ImplyIngestionApi:
         response = requests.post(url=self.INGESTION_ENDPOINT, headers=self.auth.get_headers())
         return response
 
+
 class ImplyEventApi:
 
-    def __init__(self, auth: ImplyAuthenticator, table_id=None):
+    def __init__(self, auth: ImplyAuthenticator, table_id: str = None):
         self.auth = auth
         self.TABLE_ID = table_id
         self.EVENTS_ENDPOINT = f"https://api.imply.io/v1/events/{table_id}"
@@ -130,17 +131,15 @@ class ImplyEventApi:
         return response
 
 
-
 class ImplyFileApi:
 
     def __init__(self, auth: ImplyAuthenticator):
-        self.FILE_ENDPOINT = "https://api.imply.io/v1/files"
         self.auth = auth
+        self.FILE_ENDPOINT = "https://api.imply.io/v1/files"
 
     def upload(self, filename: str) -> Response:
         file = {"file": open(filename, "rb")}
-        headers = self.auth.get_headers()
-        response = requests.post(self.FILE_ENDPOINT, headers=headers, files=file)
+        response = requests.post(self.FILE_ENDPOINT, headers=self.auth.get_headers(), files=file)
         return response
 
     def delete(self, filename: str) -> Response:
@@ -162,3 +161,54 @@ class ImplyFileApi:
         url = self.FILE_ENDPOINT
         response = requests.get(url=url, params=params, headers=self.auth.get_headers())
         return response
+
+
+class TableIngestionApi:
+
+    def __init__(self, auth: ImplyAuthenticator):
+        self.TABLE_INGESTION_ENDPOINT = "https://api.imply.io/v1"
+        self.auth = auth
+
+    def launch(self, table_id: str = None, ingestion_spec: str = None) -> Response:
+        url = f"{self.TABLE_INGESTION_ENDPOINT}/{table_id}/ingestion/jobs"
+        response = requests.post(url=url, json=ingestion_spec, headers=self.auth.get_headers())
+        return response
+
+    def get_progress(self, table_id: str = None, job_id: str = None) -> Response:
+        params = {
+            "simple": False
+        }
+        url = f"{self.TABLE_INGESTION_ENDPOINT}/{table_id}/ingestion/jobs/{job_id}/progress"
+        response = requests.get(url=url, params=params, headers=self.auth.get_headers())
+        return response
+
+    def get_info(self, table_id: str = None, job_id: str = None) -> Response:
+        url = f"{self.TABLE_INGESTION_ENDPOINT}/{table_id}/ingestion/jobs/{job_id}/description"
+        response = requests.get(url=url, headers=self.auth.get_headers())
+        return response
+
+    def cancel(self, table_id: str = None, job_id: str = None) -> Response:
+        url = f"{self.TABLE_INGESTION_ENDPOINT}/{table_id}/ingestion/jobs/{job_id}/cancel"
+        response = requests.POST(url=url, headers=self.auth.get_headers())
+        return response
+
+    def list(self, table_id: str = None):
+        url = f"{self.TABLE_INGESTION_ENDPOINT}/{table_id}/ingestion/jobs/"
+        response = requests.get(url=url, headers=self.auth.get_headers())
+        return response
+
+    def list_templates(self, table_id: str = None):
+        url = f"{self.TABLE_INGESTION_ENDPOINT}/tables/{table_id}/ingestion/templates"
+        response = requests.get(url=url, headers=self.auth.get_headers())
+        return response
+
+    def update_template(self, table_id: str = None, template_id: str = None, template_spec: str = None):
+        url = f"{self.TABLE_INGESTION_ENDPOINT}/tables/{table_id}/ingestion/templates/{template_id}"
+        response = requests.post(url=url, json=template_spec, headers=self.auth.get_headers() )
+        return response
+
+    def get_template(self, table_id: str = None, template_id: str = None):
+        url = f"{self.TABLE_INGESTION_ENDPOINT}/tables/{table_id}/ingestion/templates/{template_id}"
+        response = requests.get(url=url, headers=self.auth.get_headers())
+        return response
+

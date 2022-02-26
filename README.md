@@ -12,7 +12,8 @@ See the examples directory
 
 # TO Do
 
-Create object definitions.  Right now everything is retured as a requests.Response object
+Create object definitions.  Right now everything is returned as a requests.Response object
 
+Add unit tests
 
 
