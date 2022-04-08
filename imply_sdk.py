@@ -1,5 +1,10 @@
+import numpy as np
+import math
+import json
 import requests
 from requests import Response
+import concurrent.futures
+import time
 
 
 class ImplyAuthenticator:
@@ -87,12 +92,22 @@ class ImplyTableApi:
         if name is not None:
             params["name"] = name
 
-        response = requests.get(url=self.TABLE_ENDPOINT, params=params)
+        response = requests.get(url=self.TABLE_ENDPOINT, params=params, headers=self.auth.get_headers())
         return response
 
     def update(self, table_id: str, table_request: str = None) -> Response:
         url = f"{self.TABLE_ENDPOINT}/{table_id}"
         response = requests.put(url=url, data=table_request, headers=self.auth.get_headers())
+        return response
+
+    def disable_streaming(self, table_id: str) -> Response:
+        url = f"{self.TABLE_ENDPOINT}/{table_id}/ingestion/streaming"
+        response = requests.delete(url=url, headers=self.auth.get_headers())
+        return response
+
+    def enable_streaming(self, table_id: str) -> Response:
+        url = f"{self.TABLE_ENDPOINT}/{table_id}/ingestion/streaming"
+        response = requests.post(url=url, headers=self.auth.get_headers(), json={})
         return response
 
 
@@ -118,16 +133,42 @@ class ImplyIngestionApi:
         response = requests.post(url=self.INGESTION_ENDPOINT, headers=self.auth.get_headers())
         return response
 
-
 class ImplyEventApi:
 
     def __init__(self, auth: ImplyAuthenticator, table_id: str = None):
         self.auth = auth
         self.TABLE_ID = table_id
         self.EVENTS_ENDPOINT = f"https://api.imply.io/v1/events/{table_id}"
+        self.session = requests.Session()
 
-    def push(self, message: dict) -> Response:
-        response = requests.post(url=self.EVENTS_ENDPOINT, json=message, headers=self.auth.get_headers())
+    def push_list(self, messages: list, split_size=750000, threads=5) -> list:
+
+        responses = []
+        input_length = len(json.dumps(messages))
+        num_splits = math.ceil(input_length/split_size)
+        splits = np.array_split(messages, num_splits)
+        payloads = []
+
+        for i, split in enumerate(splits):
+            payload = ""
+            for message in split:
+                payload += json.dumps(message)
+                payload += "\n"
+
+            payloads.append(payload)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as pool:
+            responses = pool.map(self.push, payloads)
+
+        return responses
+
+    def push(self, payload: str) -> Response:
+        start = int(time.time())
+        response = self.session.post(url=self.EVENTS_ENDPOINT,
+                                     data=payload.encode("utf-8"),
+                                     headers=self.auth.get_headers())
+        end = int(time.time())
+        # print(f"Request took {end-start} seconds to push {len(payload)} bytes")
         return response
 
 
